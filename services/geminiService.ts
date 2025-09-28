@@ -1,7 +1,19 @@
 import { GoogleGenAI } from "@google/genai";
 import { QualitativeReport, AnalysisResultData, AnalysisSource } from '../types';
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+// Initialize AI client only when needed and with proper error handling
+let ai: GoogleGenAI | null = null;
+
+const getAIClient = (): GoogleGenAI => {
+  if (!ai) {
+    const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error('Gemini API key is required for qualitative analysis. Please set GEMINI_API_KEY environment variable.');
+    }
+    ai = new GoogleGenAI({ apiKey });
+  }
+  return ai;
+};
 
 /**
  * A robust helper function to extract and parse a JSON object from a string.
@@ -113,7 +125,8 @@ Please structure your entire output as a single JSON object that follows the sch
 - You **MUST** use the Google Search tool for real-time information to fulfill the requirements above.`;
 
   try {
-    const response = await ai.models.generateContent({
+    const aiClient = getAIClient();
+    const response = await aiClient.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
       config: {
