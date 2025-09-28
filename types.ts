@@ -66,3 +66,50 @@ export interface AnalysisResultData {
   report: QualitativeReport;
   sources: AnalysisSource[];
 }
+
+// Backtesting types for Moving Average Crossover Strategy
+export interface HistoricalDataPoint {
+  date: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+export interface MovingAverageParameters {
+  shortMA: number;  // Short-term moving average period (e.g., 20 days)
+  longMA: number;   // Long-term moving average period (e.g., 50 days)
+}
+
+export interface Trade {
+  entryDate: string;
+  entryPrice: number;
+  exitDate: string;
+  exitPrice: number;
+  type: 'long' | 'short';
+  profit: number;
+  profitPercent: number;
+}
+
+export interface BacktestResults {
+  parameters: MovingAverageParameters;
+  totalReturn: number;
+  annualizedReturn: number;
+  totalTrades: number;
+  winningTrades: number;
+  losingTrades: number;
+  winRate: number;
+  maxDrawdown: number;
+  sharpeRatio: number;
+  trades: Trade[];
+  equityCurve: { date: string; equity: number; niftyValue: number }[];
+  benchmarkReturn: number; // Nifty buy and hold return
+  outperformance: number;  // Strategy return - benchmark return
+}
+
+export interface OptimizationResult {
+  bestParameters: MovingAverageParameters;
+  bestResult: BacktestResults;
+  allResults: BacktestResults[];
+}

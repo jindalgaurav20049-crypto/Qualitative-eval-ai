@@ -1,10 +1,13 @@
 import React, { useState, useCallback } from 'react';
-import { UploadedFile, AnalysisResultData } from './types';
+import { UploadedFile, AnalysisResultData, OptimizationResult } from './types';
 import { analyzeDocuments } from './services/geminiService';
+import { optimizeMovingAverageStrategy } from './services/backtestingService';
 import AnalysisResult from './components/AnalysisResult';
+import BacktestInput from './components/BacktestInput';
+import BacktestResult from './components/BacktestResult';
 import Loader from './components/Loader';
 import ProgressBar from './components/ProgressBar';
-import { UploadCloudIcon, FileTextIcon, TrashIcon } from './components/icons';
+import { UploadCloudIcon, FileTextIcon, TrashIcon, ChartBarIcon } from './components/icons';
 
 // Declare pdfjsLib to be available globally from the script tag in index.html
 declare const pdfjsLib: any;
@@ -21,10 +24,12 @@ const App: React.FC = () => {
   const [files, setFiles] = useState<Record<string, UploadedFile[]>>(initialFilesState);
   const [companyName, setCompanyName] = useState<string>('');
   const [result, setResult] = useState<AnalysisResultData | null>(null);
+  const [backtestResult, setBacktestResult] = useState<OptimizationResult | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [isProcessingFiles, setIsProcessingFiles] = useState<boolean>(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [activeTab, setActiveTab] = useState<'analysis' | 'backtest'>('analysis');
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, category: string) => {
     if (!event.target.files) return;
@@ -153,16 +158,43 @@ const App: React.FC = () => {
     setFiles(initialFilesState);
     setCompanyName('');
     setResult(null);
+    setBacktestResult(null);
     setError(null);
     setIsLoading(false);
   };
+
+  const handleRunBacktest = useCallback(async () => {
+    setError(null);
+    setIsLoading(true);
+    setBacktestResult(null);
+    try {
+      const optimizationResult = optimizeMovingAverageStrategy();
+      setBacktestResult(optimizationResult);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred during backtesting.";
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
   
   const renderContent = () => {
     if (isLoading) {
       return <Loader />;
     }
-    if (result) {
+    
+    // Show results based on active tab and available data
+    if (activeTab === 'analysis' && result) {
       return <AnalysisResult result={result} onReset={handleReset}/>;
+    }
+    
+    if (activeTab === 'backtest' && backtestResult) {
+      return <BacktestResult optimizationResult={backtestResult} onReset={handleReset} />;
+    }
+
+    // Show input form based on active tab
+    if (activeTab === 'backtest') {
+      return <BacktestInput onRunBacktest={handleRunBacktest} isLoading={isLoading} />;
     }
 
     return (
@@ -236,8 +268,6 @@ const App: React.FC = () => {
               {isLoading ? 'Analyzing...' : 'Qualitative Evaluation'}
             </button>
           </div>
-
-          {error && <p className="mt-4 text-center text-red-600 bg-red-100 p-3 rounded-md">{error}</p>}
         </div>
       </div>
     );
@@ -248,14 +278,48 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-brand-bg font-sans text-brand-text">
       <header className="bg-brand-primary shadow-md">
         <div className="container mx-auto px-4 py-4">
-          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-wide">Qualitative Investment Analyst AI</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-wide">
+            Qualitative Investment Analyst AI & Strategy Backtesting
+          </h1>
+          
+          {/* Tab Navigation */}
+          <div className="mt-4 flex space-x-1">
+            <button
+              onClick={() => setActiveTab('analysis')}
+              className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                activeTab === 'analysis'
+                  ? 'bg-white text-brand-primary'
+                  : 'bg-brand-secondary text-white hover:bg-opacity-80'
+              }`}
+            >
+              Qualitative Analysis
+            </button>
+            <button
+              onClick={() => setActiveTab('backtest')}
+              className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center ${
+                activeTab === 'backtest'
+                  ? 'bg-white text-brand-primary'
+                  : 'bg-brand-secondary text-white hover:bg-opacity-80'
+              }`}
+            >
+              <ChartBarIcon className="h-4 w-4 mr-2" />
+              Strategy Backtest
+            </button>
+          </div>
         </div>
       </header>
       <main className="container mx-auto px-4 py-8 sm:py-12">
+        {error && (
+          <div className="mb-6 max-w-4xl mx-auto">
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-md">
+              {error}
+            </div>
+          </div>
+        )}
         {renderContent()}
       </main>
       <footer className="text-center py-4 text-gray-500 text-sm">
-        <p>Powered by Google Gemini. For informational purposes only.</p>
+        <p>Powered by Google Gemini & Custom Backtesting Engine. For informational purposes only.</p>
       </footer>
     </div>
   );

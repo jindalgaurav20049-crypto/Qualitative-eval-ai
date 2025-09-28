@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@media print {
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  header, footer, #action-buttons {
+    display: none !important;
+  }
+  main {
+    padding: 0 !important;
+  }
+  .report-container {
+    box-shadow: none !important;
+    border: 1px solid #e2e8f0;
+  }
+  .page-break {
+    page-break-after: always;
+  }
+}
